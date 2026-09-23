@@ -23,57 +23,59 @@ public class UserController {
 
     @PostMapping
     public User add(@RequestBody User newUser) {
-        String login = newUser.getLogin();
-        String name = newUser.getName();
-        LocalDate birthday = newUser.getBirthday();
-        String email = newUser.getEmail();
+        validate(newUser, false);
 
-        if (login == null) {
-            log.warn("При добавлении пользователя не указан логин");
-            throw new ValidationException("Логин не введен");
-        } else if (login.isBlank() || login.contains(" ")) {
-            log.warn("Попытка добавить пользователя с пустым логином или в логине есть пробелы");
-            throw new ValidationException("Логин не может быть пустым и содержать пробелы");
-        }
-        if (name == null || name.isBlank()) {
-            newUser.setName(login);
-            log.info("Поле имя оказалось пустым, имя установлено таким же как логин при добавлении пользователя, " +
-                    "login={}", login);
+        if (newUser.getName() == null || newUser.getName().isBlank()) {
+            newUser.setName(newUser.getLogin());
+            log.info("Поле имя пустое, установлено равным логину, login={}", newUser.getLogin());
         } else {
-            newUser.setName(name);
-            log.info("Успешно добавлено имя для нового пользователя, name={}", name);
+            log.info("Успешно добавлено имя для нового пользователя, name={}", newUser.getName());
         }
-        if (birthday != null && birthday.isAfter(LocalDate.now())) {
-            log.warn("При добавлении пользователя дата рождения указана в будущем, birthday={}", birthday);
-            throw new ValidationException("Дата рождения не может быть в будущем");
-        }
-        newUser.setBirthday(birthday);
-        log.info("Успешно добавлена дата рождения для нового пользователя");
-        if (email == null) {
-            log.warn("При добавлении пользователя не указан имейл");
-            throw new ValidationException("Имейл не введен");
-        } else if (email.isBlank()) {
-            log.warn("При добавлении пользователя указан пустой имейл");
-            throw new ValidationException("Электронная почта не может быть пустой");
-        } else if (!email.contains("@")) {
-            log.warn("При добавлении пользователя имейл не содержит символ @");
-            throw new ValidationException("Электронная почта должна содержать символ @");
-        }
-        String trimmedEmail = email.trim();
-        boolean isEmailTaken = users.values().stream().anyMatch(existingUser ->
-                existingUser != null && existingUser.getEmail() != null && existingUser.getEmail()
-                        .equalsIgnoreCase(trimmedEmail));
-        if (isEmailTaken) {
-            log.warn("При добавлении имейла для нового пользователя обнаружен дубликат");
-            throw new ValidationException("Этот имейл уже используется");
-        }
+
+        String trimmedEmail = newUser.getEmail().trim();
+        checkEmailUnique(trimmedEmail, null);
         newUser.setEmail(trimmedEmail);
-        log.info("Успешно добавлен имейл для нового пользователя, email={}", email);
+
         newUser.setId(getNextId());
         log.info("Получение id для нового пользователя, id={}", newUser.getId());
         users.put(newUser.getId(), newUser);
         log.info("Пользователь с id={} успешно добавлен", newUser.getId());
         return newUser;
+    }
+
+    @PutMapping
+    public User update(@RequestBody User user) {
+        if (user.getId() == null) {
+            log.warn("Не указан id при обновлении пользователя");
+            throw new ValidationException("Не указан id");
+        }
+        User oldUser = users.get(user.getId());
+        if (oldUser == null) {
+            log.warn("Пользователь с id={} не найден", user.getId());
+            throw new ValidationException("Пользователь с id = " + user.getId() + " не найден");
+        }
+
+        validate(user, true);
+
+        if (user.getName() != null && !user.getName().isBlank()) {
+            oldUser.setName(user.getName());
+            log.info("У пользователя с id={} успешно обновлено имя на {}", oldUser.getId(), oldUser.getName());
+        }
+        if (user.getLogin() != null) {
+            oldUser.setLogin(user.getLogin());
+            log.info("У пользователя с id={} успешно обновлен логин", oldUser.getId());
+        }
+        if (user.getBirthday() != null) {
+            oldUser.setBirthday(user.getBirthday());
+            log.info("У пользователя с id={} успешно обновлена дата рождения", oldUser.getId());
+        }
+        if (user.getEmail() != null) {
+            String trimmedEmail = user.getEmail().trim();
+            checkEmailUnique(trimmedEmail, oldUser.getId());
+            oldUser.setEmail(trimmedEmail);
+            log.info("У пользователя с id={} успешно обновлен имейл", oldUser.getId());
+        }
+        return oldUser;
     }
 
     private Integer getNextId() {
@@ -85,55 +87,49 @@ public class UserController {
         return ++currentMaxId;
     }
 
-    @PutMapping
-    public User update(@RequestBody User user) {
-        String login = user.getLogin();
-        String name = user.getName();
-        Integer id = user.getId();
-        String email = user.getEmail();
-        LocalDate birthday = user.getBirthday();
+    private void validate(User data, boolean isUpdate) {
+        String email = data.getEmail();
+        if (email == null) {
+            if (!isUpdate) {
+                log.warn("При добавлении пользователя не указан имейл");
+                throw new ValidationException("Имейл не введен");
+            }
+        } else if (email.isBlank()) {
+            log.warn("Указан пустой имейл");
+            throw new ValidationException("Электронная почта не может быть пустой");
+        } else if (!email.contains("@")) {
+            log.warn("Имейл не содержит символ @");
+            throw new ValidationException("Электронная почта должна содержать символ @");
+        }
 
-        if (id == null) {
-            log.warn("Не указан id при обновлении пользователя");
-            throw new ValidationException("Не указан id");
+        String login = data.getLogin();
+        if (login == null) {
+            if (!isUpdate) {
+                log.warn("При добавлении пользователя не указан логин");
+                throw new ValidationException("Логин не введен");
+            }
+        } else if (login.isBlank() || login.contains(" ")) {
+            log.warn("Логин пустой или содержит пробелы");
+            throw new ValidationException("Логин не может быть пустым и содержать пробелы");
         }
-        if (users.containsKey(id)) {
-            User oldUser = users.get(id);
-            if (name != null && !name.isBlank()) {
-                oldUser.setName(name);
-                log.info("У пользователя с id={} успешно обновлено имя на {}", id, name);
-            }
-            if (birthday != null && birthday.isBefore(LocalDate.now())) {
-                oldUser.setBirthday(birthday);
-            }
-            if (email != null) {
-                if (email.isBlank() || !email.contains("@")) {
-                    log.warn("При обновлении имейла новый указан или пустым или без @, id={}", id);
-                    throw new ValidationException("Некорректный формат email");
-                }
-                String trimmedEmail = email.trim();
-                boolean isEmailTaken = users.values().stream().anyMatch(existingUser ->
-                        !existingUser.getId().equals(oldUser.getId()) &&
-                                existingUser.getEmail() != null &&
-                                existingUser.getEmail().equalsIgnoreCase(trimmedEmail));
-                if (isEmailTaken) {
-                    log.warn("При обновлении имейла обнаружен дубликат, id={}", id);
-                    throw new ValidationException("Этот имейл уже используется");
-                }
-                oldUser.setEmail(trimmedEmail);
-                log.info("У пользователя с id={} успешно обновлен имейл", id);
-            }
-            if (login != null) {
-                if (login.isBlank() || login.contains(" ")) {
-                    log.warn("При обновлении логина указан пустой логин или логин с пробелами, id={}", id);
-                    throw new ValidationException("Логин не может быть пустым и содержать пробелы");
-                }
-                oldUser.setLogin(login);
-                log.info("У пользователя с id={} успешно обновлен логин", id);
-            }
-            return oldUser;
+
+        LocalDate birthday = data.getBirthday();
+        if (birthday != null && birthday.isAfter(LocalDate.now())) {
+            log.warn("Дата рождения указана в будущем, birthday={}", birthday);
+            throw new ValidationException("Дата рождения не может быть в будущем");
         }
-        log.warn("Пользователь с id={} не найден", id);
-        throw new ValidationException("Пользователь с id = " + id + " не найден");
+    }
+
+    private void checkEmailUnique(String email, Integer excludeUserId) {
+        String normalized = email.toLowerCase();
+        boolean isEmailTaken = users.values().stream().anyMatch(existingUser ->
+                existingUser != null
+                        && existingUser.getEmail() != null
+                        && !existingUser.getId().equals(excludeUserId)
+                        && existingUser.getEmail().toLowerCase().equals(normalized));
+        if (isEmailTaken) {
+            log.warn("Обнаружен дубликат email={}", email);
+            throw new ValidationException("Этот имейл уже используется");
+        }
     }
 }
