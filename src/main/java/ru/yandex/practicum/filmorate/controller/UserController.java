@@ -24,29 +24,29 @@ public class UserController {
         return userService.findAll();
     }
 
-    @GetMapping("/{userId}")
-    public User getById(@PathVariable Integer userId) {
-        return userService.getById(userId);
+    @GetMapping("/{id}")
+    public User getById(@PathVariable Integer id) {
+        return userService.getById(id);
     }
 
-    @GetMapping("/{userId}/friends")
-    public Set<Integer> getFriendsList(@PathVariable Integer userId) {
-        return userService.getFriendsList(userId);
+    @GetMapping("/{id}/friends")
+    public Set<Integer> getFriendsList(@PathVariable Integer id) {
+        return userService.getFriendsList(id);
     }
 
-    @GetMapping("/{userId}/friends/common/{otherId}")
-    public Set<Integer> getCommonFriends(@PathVariable Integer userId, @PathVariable Integer otherId) {
-        return userService.getCommonFriendsList(userId, otherId);
+    @GetMapping("/{id}/friends/common/{otherId}")
+    public Set<Integer> getCommonFriends(@PathVariable Integer id, @PathVariable Integer otherId) {
+        return userService.getCommonFriendsList(id, otherId);
     }
 
-    @DeleteMapping("/{userId}")
-    public void delete(@PathVariable Integer userId) {
-        userService.delete(userId);
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Integer id) {
+        userService.delete(id);
     }
 
-    @DeleteMapping("/{userId}/friends/{friendId}")
-    public void removeFriend(@PathVariable Integer userId, @PathVariable Integer friendId) {
-        userService.removeFriend(userId, friendId);
+    @DeleteMapping("/{id}/friends/{friendId}")
+    public void removeFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
+        userService.removeFriend(id, friendId);
     }
 
     @PostMapping
@@ -54,9 +54,9 @@ public class UserController {
         return userService.add(newUser);
     }
 
-    @PostMapping("/{userId}/friends/{friendId}")
-    public void addFriend(@PathVariable Integer userId, @PathVariable Integer friendId) {
-        userService.addFriend(userId, friendId);
+    @PutMapping("/{id}/friends/{friendId}")
+    public void addFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
+        userService.addFriend(id, friendId);
     }
 
     @PutMapping
