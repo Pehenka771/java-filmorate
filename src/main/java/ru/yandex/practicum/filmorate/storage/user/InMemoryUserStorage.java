@@ -4,12 +4,13 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class InMemoryUserStorage implements UserStorage {
     private final Map<Integer, User> users = new HashMap<>();
-    private final Map<Integer, Set<Integer>> friends = new HashMap<>();
+    private final Map<Integer, Set<Integer>> friends = new ConcurrentHashMap<>();
     private final AtomicInteger idGenerator = new AtomicInteger(1);
 
     @Override
@@ -66,8 +67,8 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public Set<Integer> getCommonFriendsList(Integer userId1, Integer userId2) {
-        Set<Integer> friends1 = friends.getOrDefault(userId1, new HashSet<>());
-        Set<Integer> friends2 = friends.getOrDefault(userId2, new HashSet<>());
+        Set<Integer> friends1 = friends.getOrDefault(userId1, Collections.emptySet());
+        Set<Integer> friends2 = friends.getOrDefault(userId2, Collections.emptySet());
         Set<Integer> commonFriends = new HashSet<>(friends1);
         commonFriends.retainAll(friends2);
         return commonFriends;
