@@ -11,7 +11,7 @@ import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
-import java.util.Set;
+import java.util.Collection;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -219,8 +219,8 @@ class UserControllerTest {
         User user1 = userController.add(validUser());
         User user2 = userController.add(validUser());
         userController.addFriend(user1.getId(), user2.getId());
-        Set<Integer> friends = userController.getFriendsList(user1.getId());
-        assertTrue(friends.contains(user2.getId()));
+        Collection<User> friends = userController.getFriendsList(user1.getId());
+        assertTrue(containsUser(friends, user2.getId()));
         assertEquals(1, friends.size());
     }
 
@@ -230,8 +230,9 @@ class UserControllerTest {
         User user2 = userController.add(validUser());
         userController.addFriend(user1.getId(), user2.getId());
         userController.removeFriend(user1.getId(), user2.getId());
-        Set<Integer> friends = userController.getFriendsList(user1.getId());
-        assertFalse(friends.contains(user2.getId())); assertEquals(0, friends.size());
+        Collection<User> friends = userController.getFriendsList(user1.getId());
+        assertFalse(containsUser(friends, user2.getId()));
+        assertEquals(0, friends.size());
     }
 
     @Test
@@ -258,9 +259,9 @@ class UserControllerTest {
         userController.addFriend(user2.getId(), user3.getId());
         userController.addFriend(user3.getId(), user1.getId());
         userController.addFriend(user3.getId(), user2.getId());
-        Set<Integer> common = userController.getCommonFriends(user1.getId(), user2.getId());
+        Collection<User> common = userController.getCommonFriends(user1.getId(), user2.getId());
         assertEquals(1, common.size());
-        assertTrue(common.contains(user3.getId()));
+        assertTrue(containsUser(common, user3.getId()));
     }
 
     private static int counter = 0;
@@ -273,5 +274,9 @@ class UserControllerTest {
         user.setName("Name" + suffix);
         user.setBirthday(LocalDate.of(1990, 1, 1));
         return user;
+    }
+
+    private static boolean containsUser(Collection<User> users, Integer id) {
+        return users.stream().anyMatch(u -> u.getId().equals(id));
     }
 }
