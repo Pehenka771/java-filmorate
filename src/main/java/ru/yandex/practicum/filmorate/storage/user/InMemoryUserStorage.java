@@ -66,10 +66,11 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public Set<Integer> getCommonFriendsList(Integer userId1, Integer userId2) {
-        Set<Integer> friendsOfUser1 = friends.get(userId1);
-        Set<Integer> friendsOfUser2 = friends.get(userId2);
-        friendsOfUser1.retainAll(friendsOfUser2);
-        return friendsOfUser1;
+        Set<Integer> friends1 = friends.getOrDefault(userId1, new HashSet<>());
+        Set<Integer> friends2 = friends.getOrDefault(userId2, new HashSet<>());
+        Set<Integer> commonFriends = new HashSet<>(friends1);
+        commonFriends.retainAll(friends2);
+        return commonFriends;
     }
 
     @Override
