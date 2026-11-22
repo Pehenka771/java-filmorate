@@ -10,7 +10,7 @@ import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Objects;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -98,18 +98,24 @@ public class UserService {
         userStorage.addFriend(userId, friendId);
     }
 
-    public Set<Integer> getFriendsList(Integer userId) {
+    public Collection<User> getFriendsList(Integer userId) {
         checkUserExists(userId);
-        return userStorage.getFriendsList(userId);
+        return userStorage.getFriendsList(userId).stream()
+                .map(userStorage::getById)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
-    public Set<Integer> getCommonFriendsList(Integer userId1, Integer userId2) {
+    public Collection<User> getCommonFriendsList(Integer userId1, Integer userId2) {
         if (userId1 == null || userId2 == null) {
             throw new ValidationException("Не указаны id пользователя/пользователей");
         }
         checkUserExists(userId1);
         checkUserExists(userId2);
-        return userStorage.getCommonFriendsList(userId1, userId2);
+        return userStorage.getCommonFriendsList(userId1, userId2).stream()
+                .map(userStorage::getById)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     private void validate(User data, boolean isUpdate) {
