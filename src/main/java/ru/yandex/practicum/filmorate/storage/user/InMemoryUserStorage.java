@@ -7,7 +7,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
-public class InMemoryUserStorage implements UserStorage{
+public class InMemoryUserStorage implements UserStorage {
     private final Map<Integer, User> users = new HashMap<>();
     private final Map<Integer, Set<Integer>> friends = new HashMap<>();
     private final AtomicInteger idGenerator = new AtomicInteger(1);
