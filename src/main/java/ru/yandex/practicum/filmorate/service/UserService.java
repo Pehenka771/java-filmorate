@@ -86,12 +86,6 @@ public class UserService {
     public void removeFriend(Integer userId, Integer friendId) {
         checkUserExists(userId);
         checkUserExists(friendId);
-        if (Objects.equals(userId, friendId)) {
-            throw new ValidationException("Нельзя удалить самого себя из друзей");
-        }
-        if (!userStorage.getFriendsList(userId).contains(friendId)) {
-            throw new NotFoundException("Пользователь " + friendId + " не является другом пользователя " + userId);
-        }
         userStorage.removeFriend(userId, friendId);
     }
 

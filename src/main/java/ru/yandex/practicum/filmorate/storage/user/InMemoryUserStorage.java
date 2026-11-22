@@ -54,10 +54,10 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public void removeFriend(Integer userId, Integer friendId) {
-        Set<Integer> userFriends = friends.get(userId);
-        if (userFriends != null) {
-            userFriends.remove(friendId);
-        }
+        Set<Integer> userFriends = friends.computeIfAbsent(userId, k -> new HashSet<>());
+        Set<Integer> friendFriends = friends.computeIfAbsent(friendId, k -> new HashSet<>());
+        userFriends.remove(friendId);
+        friendFriends.remove(userId);
     }
 
     @Override
