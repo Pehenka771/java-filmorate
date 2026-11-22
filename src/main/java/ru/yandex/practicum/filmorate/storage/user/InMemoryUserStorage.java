@@ -48,6 +48,7 @@ public class InMemoryUserStorage implements UserStorage {
     @Override
     public void addFriend(Integer userId, Integer friendId) {
         friends.computeIfAbsent(userId, k -> new HashSet<>()).add(friendId);
+        friends.computeIfAbsent(friendId, k -> new HashSet<>()).add(userId);
     }
 
     @Override
