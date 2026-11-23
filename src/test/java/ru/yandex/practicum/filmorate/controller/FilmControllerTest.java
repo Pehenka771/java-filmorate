@@ -1,35 +1,51 @@
-package ru.yandex.practicum.filmorate;
+package ru.yandex.practicum.filmorate.controller;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import ru.yandex.practicum.filmorate.controller.FilmController;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
 class FilmControllerTest {
 
+	@Autowired
 	private FilmController filmController;
+	@Autowired
+	private FilmStorage filmStorage;
+	@Autowired
+	private UserController userController;
+	@Autowired
+	private UserStorage userStorage;
 
 	@BeforeEach
 	void setUp() {
-		filmController = new FilmController();
+		filmStorage.clear();
+		userStorage.clear();
+		filmCounter = 0;
+		userCounter = 0;
 	}
 
 	@Test
 	void addValidFilm() {
 		Film film = validFilm();
-
 		Film added = filmController.add(film);
 
 		assertNotNull(added.getId());
-		assertEquals("Film", added.getName());
-		assertEquals("Description", added.getDescription());
-		assertEquals(LocalDate.of(2000, 1, 1), added.getReleaseDate());
-		assertEquals(100, added.getDuration());
+		assertEquals(film.getName(), added.getName());
+		assertEquals(film.getDescription(), added.getDescription());
+		assertEquals(film.getReleaseDate(), added.getReleaseDate());
+		assertEquals(film.getDuration(), added.getDuration());
 	}
 
 	@Test
@@ -123,7 +139,7 @@ class FilmControllerTest {
 	void updateFilmNotFoundShouldThrow() {
 		Film film = validFilm();
 		film.setId(999);
-		assertThrows(ValidationException.class, () -> filmController.update(film));
+		assertThrows(NotFoundException.class, () -> filmController.update(film));
 	}
 
 	@Test
@@ -172,12 +188,123 @@ class FilmControllerTest {
 		assertEquals(150, updated.getDuration());
 	}
 
+	@Test
+	void getByIdExistingFilm() {
+		Film film = filmController.add(validFilm());
+		Film found = filmController.getById(film.getId());
+		assertEquals(film.getId(), found.getId());
+		assertEquals(film.getName(), found.getName());
+	}
+
+	@Test
+	void getByIdNonExistingFilm() {
+		assertThrows(NotFoundException.class, () -> filmController.getById(999));
+	}
+
+	@Test
+	void deleteExistingFilm() {
+		Film film = filmController.add(validFilm());
+		filmController.delete(film.getId());
+		assertThrows(NotFoundException.class, () -> filmController.getById(film.getId()));
+	}
+
+	@Test
+	void deleteNonExistingFilm() {
+		assertThrows(NotFoundException.class, () -> filmController.delete(999));
+	}
+
+	@Test
+	void addLikeSuccessfully() {
+		Film film = filmController.add(validFilm());
+		User user = userController.add(validUser());
+
+		filmController.addLike(film.getId(), user.getId());
+
+		assertDoesNotThrow(() -> filmController.removeLike(film.getId(), user.getId()));
+	}
+
+	@Test
+	void addLikeTwiceShouldThrow() {
+		Film film = filmController.add(validFilm());
+		User user = userController.add(validUser());
+
+		filmController.addLike(film.getId(), user.getId());
+		assertThrows(ValidationException.class, () -> filmController.addLike(film.getId(), user.getId()));
+	}
+
+	@Test
+	void removeLikeFromNonExistingLike() {
+		Film film = filmController.add(validFilm());
+		User user = userController.add(validUser());
+
+		assertThrows(ValidationException.class, () -> filmController.removeLike(film.getId(), user.getId()));
+	}
+
+	@Test
+	void addLikeToNonExistingFilm() {
+		User user = userController.add(validUser());
+		assertThrows(NotFoundException.class, () -> filmController.addLike(999, user.getId()));
+	}
+
+	@Test
+	void addLikeWithNonExistingUser() {
+		Film film = filmController.add(validFilm());
+		assertThrows(NotFoundException.class, () -> filmController.addLike(film.getId(), 999));
+	}
+
+	@Test
+	void getMostPopularFilmsReturnsSortedByLikes() {
+		Film film1 = filmController.add(validFilm());
+		film1.setName("Popular One");
+
+		Film film2 = filmController.add(validFilm());
+		film2.setName("Less Popular");
+
+		User u1 = userController.add(validUser());
+		User u2 = userController.add(validUser());
+		User u3 = userController.add(validUser());
+
+		// Ставим 2 лайка первому фильму
+		filmController.addLike(film1.getId(), u1.getId());
+		filmController.addLike(film1.getId(), u2.getId());
+
+		// Ставим 1 лайк второму
+		filmController.addLike(film2.getId(), u3.getId());
+
+		List<Film> top = filmController.getMostPopularFilms(2);
+
+		assertEquals(2, top.size());
+		assertEquals("Popular One", top.get(0).getName()); // Больше лайков → выше в списке
+		assertEquals("Less Popular", top.get(1).getName());
+	}
+
+	@Test
+	void getMostPopularFilmsWithInvalidCountShouldThrow() {
+		assertThrows(ValidationException.class, () -> filmController.getMostPopularFilms(null));
+		assertThrows(ValidationException.class, () -> filmController.getMostPopularFilms(0));
+		assertThrows(ValidationException.class, () -> filmController.getMostPopularFilms(-5));
+	}
+
+	private static int filmCounter = 0;
+	private static int userCounter = 0;
+
 	private Film validFilm() {
+		String suffix = String.valueOf(filmCounter++);
 		Film film = new Film();
-		film.setName("Film");
+		film.setName("Film" + suffix);
 		film.setDescription("Description");
 		film.setReleaseDate(LocalDate.of(2000, 1, 1));
 		film.setDuration(100);
 		return film;
+	}
+
+	private User validUser() {
+		String suffix = String.valueOf(userCounter++);
+		User user = new User();
+		user.setLogin("login" + suffix);
+		user.setEmail("user" + suffix + "@mail.ru");
+		user.setName("name" + suffix);
+		user.setBirthday(LocalDate.of(1990, 1, 1));
+		return user;
 	}
 }
